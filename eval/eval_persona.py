@@ -9,8 +9,6 @@ import re
 import pandas as pd
 import torch
 from tqdm import tqdm, trange
-from vllm import SamplingParams
-from vllm.lora.request import LoRARequest
 
 from activation_steer import ActivationSteerer
 from config import setup_credentials
@@ -87,6 +85,11 @@ def sample(
     min_tokens=1,
     lora_path=None,
 ):
+    # vLLM is an optional GPU dependency. Import it only on the vLLM path so
+    # prompt construction, parsing, scoring, and Transformers-based smoke tests
+    # remain usable in the base environment.
+    from vllm import SamplingParams
+
     sampling_params = SamplingParams(
         temperature=temperature,
         top_p=top_p,
@@ -106,6 +109,8 @@ def sample(
 
     generate_kwargs = {"sampling_params": sampling_params, "use_tqdm": True}
     if lora_path:
+        from vllm.lora.request import LoRARequest
+
         completions = model.generate(
             texts,
             **generate_kwargs,
