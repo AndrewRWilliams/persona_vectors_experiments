@@ -201,7 +201,7 @@ sbatch_args = { account = "rrg-bengioy-ad" }
 
 [tool.cluv.clusters.fir]
 env = { UV_OFFLINE = "0", WANDB_MODE = "online" }
-sbatch_args = { account = "rrg-bengioy-ad" }
+sbatch_args = { account = "def-irina" }
 
 [tool.cluv.clusters.nibi]
 project_dir = "$HOME/persona_vectors_experiments"
