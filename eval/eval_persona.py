@@ -690,9 +690,8 @@ Forecasting question:
 
 Return ONLY valid JSON with this exact schema:
 {{
-  "probability": <number from 0 to 1>,
-  "confidence": "low|medium|high",
-  "rationale": "one concise sentence explaining the main drivers"
+  "rationale": "one concise sentence explaining the main drivers",
+  "probability": <number from 0 to 1>
 }}
 
 Do not include markdown, extra text, ranges, percentages, or multiple probabilities."""
@@ -711,11 +710,6 @@ def _extract_first_number(text):
         return None
 
 
-# The response schema requested by build_forecast_bench_prompt. Responses that
-# do not match it are refused and re-prompted rather than salvaged by guesswork.
-FORECAST_CONFIDENCE_VALUES = {"low", "medium", "high"}
-
-
 def parse_forecast_response(answer, require_all_fields=False):
     """
     Strictly parse a ForecastBench response.
@@ -729,10 +723,10 @@ def parse_forecast_response(answer, require_all_fields=False):
     an arbitrary number in free text silently fabricates confident forecasts
     (e.g. "the January 5 deadline" -> 0.05, "a 1 in 10 chance" -> 1.0).
 
-    Set require_all_fields=True to also require `confidence` and `rationale`.
-    By default they are validated only when present, since neither affects the
-    score and rejecting an otherwise-valid forecast over them costs a
-    generation for nothing.
+    Set require_all_fields=True to also require `rationale`. By default it is
+    validated only when present, since it does not affect the score and
+    rejecting an otherwise-valid forecast over it costs a generation for
+    nothing.
     """
     if answer is None:
         return None, "the response was empty"
@@ -755,6 +749,17 @@ def parse_forecast_response(answer, require_all_fields=False):
     if not isinstance(parsed, dict):
         return None, "the response was not a JSON object"
 
+    if require_all_fields and "confidence" in parsed:
+        return None, "the JSON object must not include `confidence`"
+
+    if (
+        require_all_fields
+        and "rationale" in parsed
+        and "probability" in parsed
+        and list(parsed).index("rationale") > list(parsed).index("probability")
+    ):
+        return None, "`rationale` must come before `probability`"
+
     if "probability" not in parsed:
         return None, "the JSON object had no `probability` field"
 
@@ -770,15 +775,6 @@ def parse_forecast_response(answer, require_all_fields=False):
     if not 0.0 <= probability <= 1.0:
         return None, (
             f"`probability` was {probability}, outside the required range 0 to 1"
-        )
-
-    confidence = parsed.get("confidence")
-    if confidence is None:
-        if require_all_fields:
-            return None, "the JSON object had no `confidence` field"
-    elif _normalize_forecast_text(confidence) not in FORECAST_CONFIDENCE_VALUES:
-        return None, (
-            f"`confidence` was {confidence!r}, expected one of low, medium, high"
         )
 
     rationale = parsed.get("rationale")
