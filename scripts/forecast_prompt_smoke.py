@@ -56,8 +56,6 @@ def generate(model, tokenizer, conversation, max_new_tokens=220):
 def main():
     questions = download_json("question_sets/2024-07-21-human.json")
     resolutions = download_json("resolution_sets/2024-07-21_resolution_set.json")
-    questions["question_set"] = "2024-07-21-human-three-question-smoke"
-    questions["questions"] = questions["questions"][:3]
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -69,7 +67,7 @@ def main():
             question_path,
             resolution_path=resolution_path,
             require_resolution=True,
-        )
+        )[:3]
 
     if len(records) != 3:
         raise RuntimeError(f"Expected exactly 3 resolved questions, got {len(records)}")
